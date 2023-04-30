@@ -1,7 +1,3 @@
--- | Re-implementation of @Control.Variadic@ which does not use @ReaderT@
--- and, as such, does not pack the argument list into @Varargs@. While
--- this may seem to be a more efficient encoding, the benchmarks
--- don't seem to prove this out.
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -12,25 +8,34 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+
+-- | Re-implementation of @Control.Variadic@ which does not use @ReaderT@
+-- and, as such, does not pack the argument list into @Varargs@. While
+-- this may seem to be a more efficient encoding, the benchmarks
+-- don't seem to prove this out.
 module Control.Variadic.Bench.NoReader where
 
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
 import Control.Monad.Morph (MFunctor(hoist), MMonad(embed), MonadTrans(lift))
 
+type ToVariadicArgs :: Type -> [Type]
 type family ToVariadicArgs x :: [Type] where
   ToVariadicArgs (a -> x) = a ': ToVariadicArgs x
   ToVariadicArgs a = '[]
 
-type family ToVariadicReturn x :: Type where
+type ToVariadicReturn :: Type -> Type
+type family ToVariadicReturn x where
   ToVariadicReturn (a -> x) = ToVariadicReturn x
   ToVariadicReturn a = a
 
-type family Signature (args :: [Type]) r where
+type Signature :: [Type] -> Type -> Type
+type family Signature args r where
   Signature '[] r = r
   Signature (x ': xs) r = x -> Signature xs r
 
@@ -58,11 +63,13 @@ toVariadicT
   => x -> VariadicT args f a
 toVariadicT = coerce
 
-newtype Variadic (args :: [Type]) (a :: Type) = Variadic
+type Variadic :: [Type] -> Type -> Type
+newtype Variadic args a = Variadic
   { runVariadic :: Signature args a
   }
 
-newtype VariadicT (args :: [Type]) (f :: Type -> Type) (a :: Type) = VariadicT
+type VariadicT :: [Type] -> (Type -> Type) -> Type -> Type
+newtype VariadicT args f a = VariadicT
   { runVariadicT :: Signature args (f a)
   }
 

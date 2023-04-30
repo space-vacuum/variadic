@@ -7,8 +7,10 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+
 module Control.Variadic where
 
 import Control.Monad.Morph (MFunctor(hoist), MMonad, MonadTrans)
@@ -48,12 +50,14 @@ newtype Variadic args a = Variadic
   }
 
 -- | Resolves the argument list for a function of arbitrary arity.
-type family ToVariadicArgs x :: [Type] where
+type ToVariadicArgs :: Type -> [Type]
+type family ToVariadicArgs x where
   ToVariadicArgs (i -> o) = i ': ToVariadicArgs o
   ToVariadicArgs a = '[]
 
 -- | Resolves the return type for a function of arbitrary arity.
-type family ToVariadicReturn x :: Type where
+type ToVariadicReturn :: Type -> Type
+type family ToVariadicReturn x where
   ToVariadicReturn (i -> o) = ToVariadicReturn o
   ToVariadicReturn a = a
 
@@ -79,7 +83,8 @@ instance {-# OVERLAPS #-}
       runVariadic (toVariadic (f arg)) args
 
 -- | Builds a function signature given the @args@ and return type @r@.
-type family FromVariadicSignature (args :: [Type]) (r :: Type) :: Type where
+type FromVariadicSignature :: [Type] -> Type -> Type
+type family FromVariadicSignature args r where
   FromVariadicSignature '[] r = r
   FromVariadicSignature (arg ': args) r = arg -> FromVariadicSignature args r
 
